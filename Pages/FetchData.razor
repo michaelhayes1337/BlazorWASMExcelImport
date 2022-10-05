@@ -1,5 +1,7 @@
 ﻿@page "/fetchdata"
 @inject HttpClient Http
+@using System.Reflection
+@using TestExcelImport.Models
 @using TestExcelImport.Shared
 
 @using System.Data;
@@ -39,8 +41,32 @@
 @code {
 
     DataTable dt = new DataTable();
+    ExcelEntry testEntry = new();
+    private PropertyInfo[] columnsHeaders = typeof(ExcelEntry).GetProperties();
+    private List<string> ColumnHeaders = new();
+
+
+    private List<string> GetColumnHeaders()
+    {
+        List<string> headers = new();
+        foreach (var item in columnsHeaders)
+        {
+            headers.Add(item.Name.ToString());
+            var test = item.CustomAttributes.FirstOrDefault((att) =>
+            {
+                var att2 = att;
+                int somenum = 2;
+                return true;
+            });
+        }
+        return headers;
+    }
+
 
     async Task ImportExcelFile(InputFileChangeEventArgs e){
+        // Setup Column Headers
+        ColumnHeaders = GetColumnHeaders();
+
         var fileStream = e.File.OpenReadStream();
         var ms = new MemoryStream();
         await fileStream.CopyToAsync(ms);
@@ -70,4 +96,5 @@
             rl.Clear();
         }
     }
+    
 }
