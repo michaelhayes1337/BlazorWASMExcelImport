@@ -14,58 +14,39 @@
 <MudText Typo="Typo.h3" GutterBottom="true">File Content</MudText>
 <MudText Class="mb-8">This table consists of data read from the imported excel file</MudText>
 
-<table>
-    <thead>
-        <tr>
-            @foreach (DataColumn col in dt.Columns)
-            {
-                <th>@col.ColumnName</th>
-            }
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (DataRow row in dt.Rows)
+<MudTable Items="@data" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+    <HeaderContent>
+        @foreach (string title in RequiredColumnHeaders)
         {
-            <tr>
-                @foreach (DataColumn col in dt.Columns)
-                {
-                    <td>
-                        @row[col.ColumnName].ToString()
-                    </td>
-                }
-            </tr>
+            <MudTh>@title</MudTh>
         }
-    </tbody>
-</table>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="First Name">@context.FirstName</MudTd>
+        <MudTd DataLabel="Last Name">@context.LastName</MudTd>
+        <MudTd DataLabel="Age">@context.Age</MudTd>
+    </RowTemplate>
+</MudTable>
 
 @code {
+    private bool _hidePosition;
+    private bool _loading;
 
-    DataTable dt = new DataTable();
-    ExcelEntry testEntry = new();
-    private PropertyInfo[] columnsHeaders = typeof(ExcelEntry).GetProperties();
-    private List<string> ColumnHeaders = new();
+    private List<string> RequiredColumnHeaders = new();
 
+    private List<ExcelEntry> data = new List<ExcelEntry>();
 
     private List<string> GetColumnHeaders()
     {
-        List<string> headers = new();
-        foreach (var item in columnsHeaders)
-        {
-            headers.Add(item.Name.ToString());
-            var test = item.CustomAttributes.FirstOrDefault((att) =>
-            {
-                var att2 = att;
-                int somenum = 2;
-                return true;
-            });
-        }
+        List<string> headers = new() { "First Name", "Last Name", "Age" };
         return headers;
     }
 
-
-    async Task ImportExcelFile(InputFileChangeEventArgs e){
+    async Task ImportExcelFile(InputFileChangeEventArgs e)
+    {
+        _loading = true;
         // Setup Column Headers
-        ColumnHeaders = GetColumnHeaders();
+        RequiredColumnHeaders = GetColumnHeaders();
 
         var fileStream = e.File.OpenReadStream();
         var ms = new MemoryStream();
@@ -77,24 +58,26 @@
         var xsswb = new XSSFWorkbook(ms);
         sheet = xsswb.GetSheetAt(0);
 
-        IRow hr = sheet.GetRow(0);
-        var rl = new List<string>();
-        int cc = hr.LastCellNum;
-        for(var j = 0; j < cc; j++){
-            ICell cell = hr.GetCell(j);
-            dt.Columns.Add(cell.ToString());
+        IRow headersRow = sheet.GetRow(0);
+        //Validate headers
+        for (var j = 0; j < RequiredColumnHeaders.Count; j++)
+        {
+            ICell cell = headersRow.GetCell(j);
+            if (cell.ToString() != RequiredColumnHeaders[j])
+            {
+                return;
+            }
         }
-        for (var j = (sheet.FirstRowNum+1); j <= sheet.LastRowNum; j++)
+        //Get Row Data
+        for (var j = (sheet.FirstRowNum + 1); j <= sheet.LastRowNum; j++)
         {
             var r = sheet.GetRow(j);
-            for(var i = r.FirstCellNum; i < cc; i++){
-                rl.Add(r.GetCell(i).ToString());
-            }
-            if(rl.Count>0){
-                dt.Rows.Add(rl.ToArray());
-            }
-            rl.Clear();
+            ExcelEntry ee = new();
+            ee.FirstName = r.GetCell(0).ToString() ?? "n/a";
+            ee.LastName = r.GetCell(1).ToString() ?? "n/a";
+            ee.Age = r.GetCell(2).ToString() ?? "n/a";
+            data.Add(ee);
         }
+        _loading = false;
     }
-    
 }

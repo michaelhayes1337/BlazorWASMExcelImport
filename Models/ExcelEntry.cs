@@ -9,6 +9,6 @@ namespace TestExcelImport.Models
         [DisplayName("Last Name")]
         public string LastName { get; set; } = string.Empty;
         [DisplayName("Age Test")]
-        public int? Age { get; set; }
+        public string Age { get; set; } = string.Empty;
     }
 }
